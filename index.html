@@ -53,6 +53,9 @@ button{font:inherit;background:none;border:1px solid var(--line);color:var(--mut
 button:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
 .foot{text-align:center}
 .cl{display:flex;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}.cl time{color:var(--ice);font-variant-numeric:tabular-nums;min-width:100px}.cl small{color:var(--mute)}.nowc span{color:var(--blood);font-weight:600}
+input[type=password],input[type=email]{font:inherit;width:100%;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+details p.sm{font-size:13px;color:var(--mute);margin:10px 0 0}
+details button{margin-right:8px}
 .go{display:block;margin:0 auto 20px;background:var(--blood);color:#fff;border:0;font-weight:600;padding:12px 22px}
 #rv{position:fixed;inset:0;z-index:10;background:#07050a;color:#ece8f2;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px))}
 #rv.on{display:flex}
@@ -96,6 +99,15 @@ button:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
     <li>No trading angry, tired, or after a big win.</li>
     <li>Red inside my stop is normal. I exit only at the stop, target, or time stop.</li>
   </ul>
+</details>
+<details>
+  <summary>Account and sync</summary>
+  <p class="sm" id="sstate">Signed out</p>
+  <p class="sm" id="sst"></p>
+  <input id="semail" type="email" placeholder="Email" autocomplete="email" autocapitalize="off" spellcheck="false">
+  <input id="spass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+  <button id="sin">Sign in</button><button id="sup">Create account</button><button id="sfor">Forgot password</button>
+  <button id="snow" hidden>Sync now</button><button id="sout" hidden>Sign out</button>
 </details>
 <div class="foot"><button id="reset">Reset today</button></div>
 </main>
@@ -159,10 +171,10 @@ function tick(){
 }
 document.getElementById("blocks").addEventListener("change",e=>{
   const k=e.target.dataset.k;if(!k)return;
-  done[k]=e.target.checked;save("done:"+day,done);
+  done[k]=e.target.checked;commit();
   e.target.closest("label").classList.toggle("d",e.target.checked);progress();
 });
-document.getElementById("reset").addEventListener("click",()=>{done={};save("done:"+day,done);render()});
+document.getElementById("reset").addEventListener("click",()=>{done={};commit();render()});
 const UNITS=[
 // Add one line per class: {day:2,start:"08:00",end:"10:00",unit:"Unit name",venue:"Room"}  (day: 0 Sun, 1 Mon ... 6 Sat)
 {day:2,start:"07:00",end:"10:00",unit:"SIT384: Mgt Information System",lec:"Ms. Grace",venue:"Lab 4"},
@@ -212,12 +224,94 @@ function rshow(){
   document.getElementById("rb").textContent=ri===RS.length-1?"Done":(s.b?"Skip":"Next");
   if(s.b)breathe(1);
 }
-function rdone(){["rit0","rit1","rit2","rit3","rit5"].forEach(k=>done[k]=true);save("done:"+day,done);render()}
+function rdone(){["rit0","rit1","rit2","rit3","rit5"].forEach(k=>done[k]=true);commit();render()}
 document.getElementById("rbtn").addEventListener("click",()=>{ri=0;rv.classList.add("on");rshow()});
 document.getElementById("rb").addEventListener("click",()=>{clearTimeout(bt);if(ri>=RS.length-1){rv.classList.remove("on");rdone();return}ri++;rshow()});
 document.getElementById("rx").addEventListener("click",()=>{clearTimeout(bt);rv.classList.remove("on")});
+/* ---- Email login + sync (Firebase). Paste your Firebase web config below. ---- */
+const FB={apiKey:"AIzaSyDwBf69KNHuUNAOby5xZQV5vUDZYH5KwSk",authDomain:"opium-os.firebaseapp.com",projectId:"opium-os",storageBucket:"opium-os.firebasestorage.app",messagingSenderId:"646841380373",appId:"1:646841380373:web:26d04b85f6abfbd403e81c"};
+let fb=null,user=null,stamps=load("stamps",{}),pushT=null,busy=false;
+const $=id=>document.getElementById(id),CDN="https://www.gstatic.com/firebasejs/10.12.2/";
+function setSt(t){$("sst").textContent=t}
+function showSync(){const on=!!user;$("sstate").textContent=on?"Signed in as "+user.email:"Signed out";
+  ["semail","spass","sin","sup","sfor"].forEach(i=>$(i).hidden=on);$("snow").hidden=!on;$("sout").hidden=!on}
+function commit(){save("done:"+day,done);stamps[day]=Date.now();save("stamps",stamps);schedulePush()}
+function schedulePush(){if(!user)return;clearTimeout(pushT);pushT=setTimeout(sync,3000)}
+function gather(){
+  const days={},keys=new Set(Object.keys(stamps)),h=load("hist",{});
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(K+"done:"))keys.add(k.slice(K.length+5))}}catch(e){}
+  keys.forEach(d=>{const dn=load("done:"+d,null);if(dn)days[d]={t:stamps[d]||0,done:dn,pct:h[d]||0}});
+  return days;
+}
+async function fbInit(){
+  if(fb)return fb;
+  if(!FB.apiKey)throw new Error("nocfg");
+  const [a,au,fs]=await Promise.all([import(CDN+"firebase-app.js"),import(CDN+"firebase-auth.js"),import(CDN+"firebase-firestore.js")]);
+  const app=a.initializeApp(FB),auth=au.getAuth(app);
+  fb={auth,au,fs,db:fs.getFirestore(app)};
+  au.onAuthStateChanged(auth,u=>{user=u;showSync();if(u)sync()});
+  return fb;
+}
+function authMsg(e){const c=(e&&e.code)||"";
+  if(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found")return "Wrong email or password.";
+  if(c==="auth/email-already-in-use")return "That email already has an account. Tap Sign in.";
+  if(c==="auth/weak-password")return "Password must be at least 6 characters.";
+  if(c==="auth/invalid-email")return "That email address is not valid.";
+  if(c==="auth/network-request-failed")return "No connection. Try again when you are online.";
+  if(c==="auth/unauthorized-domain")return "This web address is not allowed yet in Firebase (Authorized domains).";
+  if(c==="auth/operation-not-allowed")return "Email sign-in is not switched on in Firebase yet.";
+  if(c==="auth/too-many-requests")return "Too many tries. Wait a few minutes.";
+  return "Could not sign in. Try again.";
+}
+async function sync(){
+  if(!user||!fb||busy)return;
+  if(!navigator.onLine){setSt("Offline. Will sync when you are back online.");return}
+  busy=true;setSt("Syncing…");
+  try{
+    const fs=fb.fs,ref=fs.doc(fb.db,"users",user.uid,"sync","opium");
+    const snap=await fs.getDoc(ref),remote=snap.exists()?(snap.data().days||{}):{};
+    const local=gather();let changed=false;
+    Object.keys(remote).forEach(d=>{
+      const r=remote[d],l=local[d];
+      if(!r||!r.done)return;
+      if(!l||(r.t||0)>(l.t||0)){save("done:"+d,r.done);stamps[d]=r.t||0;const h=load("hist",{});h[d]=r.pct||0;save("hist",h);changed=true}
+    });
+    if(changed){save("stamps",stamps);done=load("done:"+day,{});hist=load("hist",{});render()}
+    const merged=gather();
+    const need=Object.keys(merged).some(d=>!remote[d]||(remote[d].t||0)!==merged[d].t||remote[d].pct!==merged[d].pct);
+    if(need)await fs.setDoc(ref,{v:1,updated:Date.now(),days:merged});
+    setSt("Synced at "+new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}));
+  }catch(e){
+    setSt(e.code==="permission-denied"?"Permission denied. Check the Firestore rules.":"Sync failed. Will retry.");
+  }
+  busy=false;
+}
+async function authDo(kind){
+  if(!FB.apiKey){setSt("Sync is not set up yet.");return}
+  const email=$("semail").value.trim(),pass=$("spass").value;
+  if(!email||(kind!=="reset"&&!pass)){setSt("Enter your email and password.");return}
+  try{
+    setSt("Please wait…");
+    await fbInit();
+    if(kind==="up")await fb.au.createUserWithEmailAndPassword(fb.auth,email,pass);
+    else if(kind==="in")await fb.au.signInWithEmailAndPassword(fb.auth,email,pass);
+    else{await fb.au.sendPasswordResetEmail(fb.auth,email);setSt("Password reset email sent. Check your inbox.");return}
+    $("spass").value="";
+  }catch(e){setSt(authMsg(e))}
+}
+$("sin").addEventListener("click",()=>authDo("in"));
+$("sup").addEventListener("click",()=>authDo("up"));
+$("sfor").addEventListener("click",()=>authDo("reset"));
+$("snow").addEventListener("click",sync);
+$("sout").addEventListener("click",async()=>{try{await fb.au.signOut(fb.auth);setSt("Signed out. Your data stays on this phone.")}catch(e){setSt("Could not sign out. Try again.")}});
+function kick(){if(!FB.apiKey)return;fbInit().then(()=>{if(user)sync()}).catch(()=>setSt("Offline. Sign-in will load when you are online."))}
 if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js").catch(()=>{})})}
 render();tick();setInterval(tick,1000);setInterval(()=>{blocks=build();render()},60000);
+showSync();
+if(!FB.apiKey)setSt("Sync is not set up yet.");else kick();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)kick()});
+window.addEventListener("online",kick);
+setInterval(kick,300000);
 </script>
 </body>
 </html>
