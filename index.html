@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Opium OS: monk mode</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0e0a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Opium OS">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+:root{--bg:#f6f3f7;--panel:#fff;--line:#ddd3e2;--ink:#1d1524;--mute:#6a5f78;--blood:#b3102f;--ice:#2a5bd7;--ok:#1f7a4d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e0a12;--panel:#181220;--line:#2e2338;--ink:#ece8f2;--mute:#9a8fa8;--blood:#e11d48;--ice:#9fc4ff;--ok:#5ad19a}}
+:root[data-theme="dark"]{--bg:#0e0a12;--panel:#181220;--line:#2e2338;--ink:#ece8f2;--mute:#9a8fa8;--blood:#e11d48;--ice:#9fc4ff;--ok:#5ad19a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:15px;font-weight:600;letter-spacing:.04em;margin:0;color:var(--mute)}
+.hero{display:grid;place-items:center;text-align:center;padding:18px 0 8px}
+.ringbox{position:relative;width:min(78vw,300px);aspect-ratio:1}
+.ringbox svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ringbox .c{position:absolute;inset:0;display:grid;place-content:center;gap:2px}
+.next{font-size:13px;color:var(--mute);max-width:200px;margin:0 auto}
+.count{font-size:clamp(30px,10vw,46px);font-weight:200;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.pct{font-size:13px;color:var(--blood);font-weight:600}
+.clocks{display:flex;justify-content:center;gap:20px;font-size:13px;color:var(--mute);margin-top:10px;font-variant-numeric:tabular-nums}
+.clocks b{color:var(--ink);font-weight:600}
+.streak{text-align:center;margin:12px 0 22px;font-size:14px;color:var(--mute)}
+.streak b{color:var(--ice);font-size:18px}
+section{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px 16px;margin:0 0 12px;transition:opacity .2s}
+section.past{opacity:.55}
+section.now{border-color:var(--blood);box-shadow:0 0 0 1px var(--blood),0 0 24px -8px var(--blood)}
+section h2{margin:0 0 6px;font-size:17px;font-weight:600;display:flex;gap:10px;align-items:baseline}
+section h2 time{font-size:13px;color:var(--ice);font-variant-numeric:tabular-nums;font-weight:500}
+section p{margin:0 0 8px;font-size:13px;color:var(--mute)}
+label{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);cursor:pointer;font-size:15px}
+label:first-of-type{border-top:0}
+input[type=checkbox]{appearance:none;flex:none;width:22px;height:22px;margin:1px 0 0;border:2px solid var(--mute);border-radius:6px;display:grid;place-content:center}
+input[type=checkbox]:checked{background:var(--blood);border-color:var(--blood)}
+input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+input[type=checkbox]:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+label.d span{text-decoration:line-through;color:var(--mute)}
+details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;background:var(--panel);margin-top:18px}
+summary{cursor:pointer;font-weight:600}
+details ul{margin:10px 0 0;padding-left:20px;font-size:14px}
+details li{margin:4px 0}
+button{font:inherit;background:none;border:1px solid var(--line);color:var(--mute);border-radius:10px;padding:8px 14px;margin-top:16px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+.foot{text-align:center}
+.cl{display:flex;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}.cl time{color:var(--ice);font-variant-numeric:tabular-nums;min-width:100px}.cl small{color:var(--mute)}.nowc span{color:var(--blood);font-weight:600}
+.go{display:block;margin:0 auto 20px;background:var(--blood);color:#fff;border:0;font-weight:600;padding:12px 22px}
+#rv{position:fixed;inset:0;z-index:10;background:#07050a;color:#ece8f2;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px))}
+#rv.on{display:flex}
+#rv .st{font-size:13px;color:#9a8fa8;margin-bottom:18px}
+#rv h3{font-size:26px;font-weight:300;margin:0 0 14px;max-width:420px}
+#rv p{font-size:17px;line-height:1.7;max-width:420px;margin:0 0 10px;color:#ddd5e8}
+#orb{width:120px;height:120px;border-radius:50%;margin:10px auto 18px;border:2px solid #e11d48;box-shadow:0 0 40px -6px #e11d48;transform:scale(.6);transition:transform 4s ease-in-out}
+#rv button{border-color:#2e2338;color:#ece8f2;margin:6px}
+#rv .pri{background:#e11d48;border-color:#e11d48;color:#fff}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Opium OS · monk mode</h1>
+<div class="hero">
+  <div class="ringbox">
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="54" fill="none" stroke="var(--line)" stroke-width="5"/>
+      <circle id="arc" cx="60" cy="60" r="54" fill="none" stroke="var(--blood)" stroke-width="5" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3"/>
+    </svg>
+    <div class="c">
+      <div class="next" id="next">…</div>
+      <div class="count" id="count">--:--:--</div>
+      <div class="pct" id="pct">0% done today</div>
+    </div>
+  </div>
+  <div class="clocks"><span>Nairobi <b id="eat">--:--</b></span><span>New York <b id="et">--:--</b></span></div>
+</div>
+<div class="streak"><b id="streak">0</b> full days in a row</div>
+<button class="go" id="rbtn">Start the ritual</button>
+<div id="cls"></div>
+<div id="blocks"></div>
+<details>
+  <summary>Hard rules</summary>
+  <ul>
+    <li>Risk 1% or less across all positions combined.</li>
+    <li>Stop and target set before entry. The stop is never widened.</li>
+    <li>One trade idea a day. Each position has its exit written first.</li>
+    <li>Never add to a loser. Stop to breakeven after the first target.</li>
+    <li>No trading angry, tired, or after a big win.</li>
+    <li>Red inside my stop is normal. I exit only at the stop, target, or time stop.</li>
+  </ul>
+</details>
+<div class="foot"><button id="reset">Reset today</button></div>
+</main>
+<div id="rv" role="dialog" aria-modal="true" aria-label="Ritual"><div class="st" id="rs"></div><h3 id="rh"></h3><div id="orb" hidden></div><div id="rp"></div><div><button id="rb" class="pri">Next</button><button id="rx">Close</button></div></div>
+<script>
+const EAT="Africa/Nairobi",ET="America/New_York";
+const fmt=(tz,d)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(d).reduce((o,p)=>(o[p.type]=p.value,o),{});
+const hm=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")};
+function offsetH(){const d=new Date(),a=fmt(EAT,d),b=fmt(ET,d);return((+a.hour-+b.hour)%24+24)%24}
+function build(){
+  const o=offsetH()*60,w=(h,m)=>h*60+m+o;
+  return [
+    {id:"wake",t:390,n:"Wake and body",d:"First hour belongs to me, not the screen.",i:["No phone for 60 minutes","Water, then sunlight","20 minutes of movement"]},
+    {id:"mind",t:450,n:"Mind",d:"Stoic and Zen practice. Cold, clear, unbothered.",i:["10 minutes of stillness","Write the day’s one intention","Read the hard rules once"]},
+    {id:"study",t:540,n:"Backtest block",d:"5-minute replay. Log every setup, including skips.",i:["Replay one session on the 5-minute chart","Log each setup: entry type, R, followed plan","Count my test trades toward 20"]},
+    {id:"rest",t:720,n:"Fuel and rest",d:"No charts. Let the mind reset.",i:["Light meal","Walk outside","Charts closed"]},
+    {id:"prep",t:w(8,0),n:"Prep",d:"Everything is decided before the window opens.",i:["Find the 5-minute trend","Mark the break of structure","Mark only the most recent zone","Set the alert at the zone","Write entry types and exits for each position"]},
+    {id:"rit",t:w(9,0),n:"Ritual",d:"Cold, slow, unhurried. Tap Start the ritual at the top.",i:["Dark room, phone away, candle lit","Traced the seal and breathed ten rounds","Said the vow","Read the pre-trade checklist out loud","Hide the live P&L","Candle out"]},
+    {id:"main",t:w(9,25),n:"Main window",d:"09:25 to 10:15 New York. NQ only. Wait for the closed candle.",i:["Alert fired, tap confirmed","Decided at the 5-minute close","Stop and target in as orders before entry","Total risk 1% or less"]},
+    {id:"sec",t:w(10,45),n:"Second window",d:"10:45 to 11:15 New York. Only if no trade idea yet today.",i:["One trade idea today, no more","Skipped everything that broke a step"]},
+    {id:"stop",t:w(11,30),n:"Time stop",d:"Done. Close anything still open.",i:["Positions closed","Charts closed"]},
+    {id:"log",t:w(11,45),n:"Journal",d:"Log it in Opium while it’s fresh.",i:["Logged each position and total R","Marked: followed the plan? closed by hand?","Wrote one line on how I felt"]},
+    {id:"down",t:1290,n:"Shutdown",d:"Recover like it’s part of the job.",i:["No charts, no trading content","Prep tomorrow’s clothes and water","Asleep by 22:30"]}
+  ].sort((a,b)=>(a.t%1440)-(b.t%1440));
+}
+const K="opium-os:",today=()=>{const p=fmt(EAT,new Date());return p.year+"-"+p.month+"-"+p.day};
+function load(k,def){try{const v=localStorage.getItem(K+k);return v?JSON.parse(v):def}catch(e){return def}}
+function save(k,v){try{localStorage.setItem(K+k,JSON.stringify(v))}catch(e){}}
+let blocks=build(),day=today(),done=load("done:"+day,{}),hist=load("hist",{});
+const total=()=>blocks.reduce((s,b)=>s+b.i.length,0);
+const count=()=>blocks.reduce((s,b)=>s+b.i.filter((_,j)=>done[b.id+j]).length,0);
+const nowMin=()=>{const p=fmt(EAT,new Date());return +p.hour*60+ +p.minute};
+function streak(){let n=0,d=new Date(),k=today();if((hist[k]||0)<100)d.setUTCDate(d.getUTCDate()-1);
+  for(;;){const p=fmt(EAT,d),key=p.year+"-"+p.month+"-"+p.day;if(hist[key]===100){n++;d.setUTCDate(d.getUTCDate()-1)}else break}return n}
+function render(){
+  const nm=nowMin();let cur=-1;blocks.forEach((b,i)=>{if(b.t<=nm)cur=i});
+  document.getElementById("blocks").innerHTML=blocks.map((b,i)=>{
+    const c=i===cur?"now":i<cur?"past":"";
+    return `<section class="${c}"><h2><time>${hm(b.t)}</time>${b.n}</h2><p>${b.d}</p>`+
+      b.i.map((t,j)=>`<label class="${done[b.id+j]?"d":""}"><input type="checkbox" data-k="${b.id+j}" ${done[b.id+j]?"checked":""}><span>${t}</span></label>`).join("")+`</section>`}).join("");
+  progress();renderCls();
+}
+function progress(){
+  const pct=Math.round(count()/total()*100);
+  document.getElementById("pct").textContent=pct+"% done today";
+  document.getElementById("arc").style.strokeDashoffset=339.3*(1-pct/100);
+  hist[day]=pct;save("hist",hist);
+  document.getElementById("streak").textContent=streak();
+}
+function tick(){
+  const d=new Date(),a=fmt(EAT,d),b=fmt(ET,d);
+  document.getElementById("eat").textContent=a.hour+":"+a.minute;
+  document.getElementById("et").textContent=b.hour+":"+b.minute;
+  const secs=+a.hour*3600+ +a.minute*60+ +a.second;
+  let nx=blocks.find(x=>x.t*60>secs),diff;
+  if(nx)diff=nx.t*60-secs;else{nx=blocks[0];diff=nx.t*60+86400-secs}
+  const h=Math.floor(diff/3600),m=Math.floor(diff%3600/60),s=diff%60;
+  document.getElementById("next").textContent="Next: "+nx.n;
+  document.getElementById("count").textContent=[h,m,s].map(v=>String(v).padStart(2,"0")).join(":");
+  if(today()!==day){day=today();done=load("done:"+day,{});blocks=build();render()}
+}
+document.getElementById("blocks").addEventListener("change",e=>{
+  const k=e.target.dataset.k;if(!k)return;
+  done[k]=e.target.checked;save("done:"+day,done);
+  e.target.closest("label").classList.toggle("d",e.target.checked);progress();
+});
+document.getElementById("reset").addEventListener("click",()=>{done={};save("done:"+day,done);render()});
+const UNITS=[
+// Add one line per class: {day:2,start:"08:00",end:"10:00",unit:"Unit name",venue:"Room"}  (day: 0 Sun, 1 Mon ... 6 Sat)
+{day:2,start:"07:00",end:"10:00",unit:"SIT384: Mgt Information System",lec:"Ms. Grace",venue:"Lab 4"},
+{day:2,start:"10:00",end:"13:00",unit:"SIT372: Simulation and Modeling",lec:"Mr. Mulinge",venue:"COMP LAB 4"},
+{day:2,start:"13:00",end:"16:00",unit:"SIT365: Software Metrics",lec:"Ms. Veronica",venue:"PF2L4"},
+{day:3,start:"07:00",end:"10:00",unit:"SIT327: Event-Driven Programming",lec:"Mr. George",venue:"LUBAN"},
+{day:3,start:"13:00",end:"16:00",unit:"SIT342/SCO307: Human Comp Int.",lec:"Mr. Mwunda",venue:"ADB LAB"},
+{day:3,start:"16:00",end:"19:00",unit:"SIT328: OS Implementation",lec:"Mr. Kimeu",venue:"Luban Workshop"},
+{day:4,start:"10:00",end:"13:00",unit:"SIT373: Computer Networks",lec:"Ms. Veronicah",venue:"Lab 1"},
+{day:4,start:"16:00",end:"19:00",unit:"SIT394: Emerging Technologies",lec:"Mr. Kimeu",venue:"PF2L6"},
+];
+const CATS=[
+{date:"2026-11-24",time:"08:00",unit:"SIT384: Mgt Information System",lec:"Ms. Grace",venue:"Lab 4"},
+{date:"2026-11-25",time:"",unit:"SIT327: Event-Driven Programming",lec:"Mr. George",venue:"LUBAN"},
+];
+function renderCls(){
+  const p=fmt(EAT,new Date()),wd=new Date(Date.UTC(+p.year,+p.month-1,+p.day)).getUTCDay(),nm=+p.hour*60+ +p.minute;
+  const m=s=>+s.slice(0,2)*60+ +s.slice(3);
+  const list=UNITS.filter(u=>u.day===wd).sort((a,b)=>m(a.start)-m(b.start));
+  const td=today(),up=CATS.filter(c=>c.date>=td).sort((a,b)=>a.date<b.date?-1:1);
+  const catsHtml=up.length?"<section class=\"now\"><h2>Upcoming CATs</h2>"+up.map(c=>`<div class="cl"><time>${new Date(c.date+"T00:00:00Z").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"})}<br>${c.time||"Time TBC"}</time><span>${c.unit}<br><small>${c.lec} · ${c.venue}</small></span></div>`).join("")+"</section>":"";
+  document.getElementById("cls").innerHTML=catsHtml+"<section><h2>Classes today</h2>"+(list.length?list.map(u=>`<div class="cl${m(u.start)<=nm&&nm<m(u.end)?" nowc":""}"><time>${u.start}–${u.end}</time><span>${u.unit}<br><small>${u.lec} · ${u.venue}</small></span></div>`).join(""):"<p>"+(UNITS.length?"No classes today.":"No classes added yet. Send me your timetable and I’ll fill this in.")+"</p>")+"</section>";
+}
+const RS=[
+{h:"Dark room, phone away",p:"One candle. Your plan and the pentagram in front of you. Light it, then tap Next."},
+{h:"Trace the seal",p:"Trace the pentagram once, slowly, with your finger.|Nothing enters the session without the plan."},
+{h:"Breathe",b:1,p:""},
+{h:"Name the fear",p:"Say one sentence: “I’m afraid this one loses.”|Then: “I can feel it and still follow the plan.”"},
+{h:"The vow",p:"Say it low and slow.|The King does not chase. He waits at the zone.|He decides at the close of the candle.|His stop is his word. His target is his word.|He has no impulse, only precision."},
+{h:"Read the checklist",p:"Out loud. Any box that isn’t ticked means no entry."},
+{h:"Candle out",p:"Blow it out. The ritual is over. The work starts."}
+];
+let ri=0,bt=null;const rv=document.getElementById("rv");
+function breathe(n){
+  const orb=document.getElementById("orb"),rp=document.getElementById("rp");
+  if(n>10){orb.style.transform="scale(.6)";rp.innerHTML="<p>Ten rounds done.</p>";document.getElementById("rb").textContent="Next";return}
+  rp.innerHTML="<p>Round "+n+" of 10: in for 4</p>";
+  orb.style.transitionDuration="4s";orb.style.transform="scale(1)";
+  bt=setTimeout(()=>{rp.innerHTML="<p>Round "+n+" of 10: out for 6</p>";orb.style.transitionDuration="6s";orb.style.transform="scale(.6)";bt=setTimeout(()=>breathe(n+1),6000)},4000);
+}
+function rshow(){
+  clearTimeout(bt);const s=RS[ri];
+  document.getElementById("rs").textContent="Step "+(ri+1)+" of "+RS.length;
+  document.getElementById("rh").textContent=s.h;
+  document.getElementById("orb").hidden=!s.b;
+  document.getElementById("rp").innerHTML=s.p.split("|").map(t=>"<p>"+t+"</p>").join("");
+  document.getElementById("rb").textContent=ri===RS.length-1?"Done":(s.b?"Skip":"Next");
+  if(s.b)breathe(1);
+}
+function rdone(){["rit0","rit1","rit2","rit3","rit5"].forEach(k=>done[k]=true);save("done:"+day,done);render()}
+document.getElementById("rbtn").addEventListener("click",()=>{ri=0;rv.classList.add("on");rshow()});
+document.getElementById("rb").addEventListener("click",()=>{clearTimeout(bt);if(ri>=RS.length-1){rv.classList.remove("on");rdone();return}ri++;rshow()});
+document.getElementById("rx").addEventListener("click",()=>{clearTimeout(bt);rv.classList.remove("on")});
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js").catch(()=>{})})}
+render();tick();setInterval(tick,1000);setInterval(()=>{blocks=build();render()},60000);
+</script>
+</body>
+</html>
